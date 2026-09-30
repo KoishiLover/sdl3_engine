@@ -4,11 +4,10 @@
 
 #ifndef SDL3_ENGINE_ENGINE_FRAME_H
 #define SDL3_ENGINE_ENGINE_FRAME_H
-// include"engine_resource.hpp"
 #include"engine_render.hpp"
-
-#include<string>
+#include<cstdint>
 namespace engine {
+
 
     //引擎状态
     enum class EngineStatus {
@@ -43,10 +42,10 @@ namespace engine {
         bool LoadScripts();
     //接口方法
     public:
-        void SetFPS(uint32_t fps) noexcept;
+        void SetFPS(Uint64 fps) noexcept;
         void SetTitle(const char* title)noexcept;
         void SetWindowed(bool v)noexcept;
-        void SetResolution(uint32_t width, uint32_t height)noexcept;
+        void SetResolution(Uint64 width, Uint64 height)noexcept;
         void SetVsync(bool v)noexcept;
     };
 
