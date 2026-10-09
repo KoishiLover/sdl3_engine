@@ -1,2 +1,2 @@
-#Simple SDL3 STG engine
+Simple SDL3 STG engine
 
