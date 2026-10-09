@@ -17,6 +17,7 @@ namespace engine {
         static void LW_SetWindowed(bool v);
         static void LW_SetVsync(bool v);
         static void LW_SetResolution(int width, int height);
+        static float LW_GetFPS()noexcept;
         static void LW_LoadTexture(std::string_view path,std::string_view name);
         static void LW_LoadImage(std::string_view name , std::string_view tex , float x,float y ,float w,float h);
         static void LW_DrawImage(std::string_view img , float x,float y,float rot ,float scale);
@@ -33,6 +34,8 @@ namespace engine {
         static void LW_LoadSE(const std::string& name ,std::string_view path)noexcept;
         static void LW_PlaySE(std::string_view name)  noexcept;
         static void LW_SetSEVolume(float vol) noexcept;
+        static bool LW_GetKeyState(int key)noexcept;
+        static bool LW_IsKeyDown(int key)noexcept;
         [[nodiscard]] static bool Init(sol::state &m_lua );
 
     };

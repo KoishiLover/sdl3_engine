@@ -15,6 +15,10 @@ add_executable(hatta-engine main.cpp
         engine/resource/Renderer.cpp
         engine/resource/Audio.cpp
         engine/resource/Audio.hpp
+        engine/input/Input.hpp
+        engine/input/Input.cpp
+        engine/game/GameObject.cpp
+        engine/game/GameObject.hpp
 )
 add_custom_command(TARGET hatta-engine POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory

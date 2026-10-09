@@ -24,6 +24,11 @@ namespace engine {
     void LuaWrapper::LW_SetWindowed(bool v) {
         IENGINE.SetWindowed(v);
     }
+
+    float LuaWrapper::LW_GetFPS() noexcept {
+        return IENGINE.GetFPS();
+    }
+
     ////渲染相关
     void LuaWrapper::LW_LoadTexture(std::string_view path,std::string_view name) {
         IENGINE.LoadTexture(path,name);
@@ -74,6 +79,14 @@ namespace engine {
     void LuaWrapper::LW_SetSEVolume(float vol) noexcept {
         IENGINE.SetSEVolume(vol);
     }
+
+    bool LuaWrapper::LW_GetKeyState(int key) noexcept {
+        return IENGINE.GetKeyState(key);
+    }
+    bool LuaWrapper::LW_IsKeyDown(int key) noexcept {
+        return IENGINE.IsKeyDown(key);
+    }
+
 }
 
 namespace engine {
@@ -85,6 +98,7 @@ namespace engine {
         engine.set_function("SetVsync" ,&LuaWrapper::LW_SetVsync);
         engine.set_function("SetResolution" ,&LuaWrapper::LW_SetResolution);
         engine.set_function("SetWindowed" ,&LuaWrapper::LW_SetWindowed);
+        engine.set_function("GetFPS" ,&LuaWrapper::LW_GetFPS);
         //渲染相关
         engine.new_enum("BlendMode",
             "None",BlendMode::None,
@@ -109,6 +123,9 @@ namespace engine {
         engine.set_function("LoadSE",             &LuaWrapper::LW_LoadSE);
         engine.set_function("PlaySE",             &LuaWrapper::LW_PlaySE);
         engine.set_function("SetSEVolume",         &LuaWrapper::LW_SetSEVolume);
+        //键盘输入
+        engine.set_function("GetKeyState",        &LuaWrapper::LW_GetKeyState);
+        engine.set_function("IsKeyDown",          &LuaWrapper::LW_IsKeyDown);
 
         return m_lua["jit"].valid();
     }

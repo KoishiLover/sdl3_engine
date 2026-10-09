@@ -4,10 +4,11 @@
 //
 #include "frame_controller.hpp"
 #include <SDL3/SDL_timer.h>
-
+#include"engine_log.hpp"
 namespace engine {
     FrameController::FrameController() noexcept = default;
 
+    using log = EngineLogger;
 
     void FrameController::Init() noexcept {
         if (!m_target_fps) {
@@ -55,6 +56,9 @@ namespace engine {
         m_event_duration[1] = now - m_stage_start_time;
         m_other_duration[1] += m_event_duration[1];
         m_stage_start_time = now;
+
+
+
     }
 
     void FrameController::EndUpdate() noexcept {
@@ -69,27 +73,32 @@ namespace engine {
         m_other_duration[1] += m_render_duration[1];
     }
 
+
     void FrameController::EndFrame() noexcept {
+        // 1. 用实际耗时，不用目标值
         auto elapsed = SDL_GetTicksNS() - m_start_time;
         if (elapsed < m_target_delay) {
-            SDL_DelayNS(m_target_delay - elapsed);
-            m_dt = static_cast<float>(m_target_delay) /1.0e9f;
-            m_frame_duration[1] = m_target_delay;
-
-        } else {
-            m_dt = static_cast<float>(elapsed) / 1.0e9f;
-            m_frame_duration[1] = elapsed;
+            SDL_DelayPrecise(m_target_delay - elapsed);
         }
-        m_other_duration[1]  = m_frame_duration[1] -m_other_duration[1];
+        auto actual = SDL_GetTicksNS() - m_start_time;
+
+        m_dt = static_cast<float>(actual) / 1.0e9f;
+        m_frame_duration[1] = actual;
+
+
+        m_other_duration[1] = m_frame_duration[1]
+                            - m_event_duration[1]
+                            - m_update_duration[1]
+                            - m_render_duration[1];
+
+        ++m_frame_count;
         auto now = SDL_GetTicksNS();
         auto window_elapsed = now - m_window_start_time;
         if (window_elapsed >= 1000000000) {
-            m_average_fps =static_cast<float>(m_frame_count) / static_cast<float>(window_elapsed);
-            m_window_start_time = now;
+            m_average_fps = static_cast<float>(m_frame_count) * 1.0e9f
+                          / static_cast<float>(window_elapsed);
+            m_window_start_time =  now;
             m_frame_count = 0;
-        } else {
-            ++m_frame_count;
         }
     }
-
 }

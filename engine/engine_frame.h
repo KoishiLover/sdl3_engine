@@ -10,6 +10,7 @@
 #include<sol/state.hpp>
 #include"resource/Renderer.hpp"
 #include"resource/Audio.hpp"
+#include"input/Input.hpp"
 namespace engine {
 
     //引擎状态
@@ -35,7 +36,7 @@ namespace engine {
         Renderer m_renderer;
         Audio  m_audio;
         FrameController m_controller ;
-
+        Input m_input;
         sol::state m_lua;
         //lua侧的回调函数
         sol::protected_function m_init;
@@ -72,6 +73,7 @@ namespace engine {
         void SetWindowed(bool v)noexcept;
         void SetResolution(Uint64 width, Uint64 height)noexcept;
         void SetVsync(bool v)noexcept;
+        [[nodiscard]]float GetFPS()const noexcept;
         //渲染接口
         void LoadTexture(std::string_view path,std::string_view name);
         void LoadImage(std::string_view name , std::string_view tex , float x,float y ,float w,float h);
@@ -91,6 +93,9 @@ namespace engine {
         void PlaySE(std::string_view name)  noexcept;
         void SetSEVolume(float vol)const noexcept;
 
+        //处理输入
+        [[nodiscard]]bool GetKeyState(int key)const noexcept;
+        [[nodiscard]]bool IsKeyDown(int key)const noexcept;
 
         bool GameInit();
         void GameUpdate();

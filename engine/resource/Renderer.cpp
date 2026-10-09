@@ -22,6 +22,7 @@ namespace engine {
             log::err("[engine] 创建渲染器时出错:{}",SDL_GetError());
             return false;
         }
+        SDL_SetRenderVSync(m_renderer ,0);
         return true;
     }
     SDL_Renderer* Renderer::GetRenderer()const noexcept {

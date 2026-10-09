@@ -54,6 +54,11 @@ namespace engine {
 
         m_controller.Init();
         log::info("[engine] FrameController 初始化完成");
+
+        if (!m_input.Init()) {
+            return false;
+        }
+
         m_status = EngineStatus::Running;
         log::info("[engine] 引擎初始化完成 Engine Status : Running");
         return true;
@@ -75,6 +80,7 @@ namespace engine {
 
     void Engine::OnUpdate() {
         GameUpdate();
+        m_input.UpdateLastInput();
     }
     void Engine::OnRender() {
         SDL_RenderClear(m_renderer.GetRenderer());
@@ -261,6 +267,11 @@ namespace engine {
         if (m_status == EngineStatus::Running)
             m_resized = true;
     }
+
+    float Engine::GetFPS() const noexcept {
+        return m_controller.GetFPS();
+    }
+
     void Engine::LoadTexture(std::string_view path,std::string_view name) {
         m_renderer.LoadTexture(path,name);
     }
@@ -309,6 +320,14 @@ namespace engine {
     void Engine::SetSEVolume(float vol)const noexcept {
         m_audio.SetSEVolume(vol);
     }
+
+    bool Engine::GetKeyState(const int key) const noexcept {
+        return m_input.GetKeyState(key);
+    }
+    bool Engine::IsKeyDown(const int key) const noexcept {
+        return m_input.GetKeyState(key);
+    }
+
 }
 
 
