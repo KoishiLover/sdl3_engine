@@ -10,7 +10,7 @@ add_executable(hatta-engine main.cpp
         engine/lua_bind.hpp
         engine/lua_bind.cpp
         engine/engine_utils.hpp
-        engine/resource/image.hpp
+        engine/resource/Sprite.hpp
         engine/resource/Renderer.hpp
         engine/resource/Renderer.cpp
         engine/resource/Audio.cpp
@@ -19,6 +19,8 @@ add_executable(hatta-engine main.cpp
         engine/input/Input.cpp
         engine/game/GameObject.cpp
         engine/game/GameObject.hpp
+        engine/game/GameObjectManager.cpp
+        engine/game/GameObjectManager.hpp
 )
 add_custom_command(TARGET hatta-engine POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
