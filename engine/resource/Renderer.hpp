@@ -11,7 +11,7 @@
 #include<set>
 #include<array>
 #include <SDL3/SDL_render.h>
-#include"image.hpp"
+#include"Sprite.hpp"
 #include"../engine_utils.hpp"
 struct SDL_Texture;
 struct SDL_Renderer;
@@ -19,7 +19,7 @@ struct SDL_Renderer;
 
 
 namespace engine {
-    class Image;
+    class Sprite;
     struct TextureDeleter {
         void operator()(SDL_Texture* tex)const {
             if(tex != nullptr) {
@@ -48,7 +48,7 @@ namespace engine {
         void Destroy();
     private:
         std::unordered_map<std::string , TexturePtr,StringHash ,StringEqual> m_textures;
-        std::unordered_map<std::string , Image ,StringHash,StringEqual> m_images;
+        std::unordered_map<std::string , Sprite ,StringHash,StringEqual> m_images;
         std::unordered_map<std::string ,std::set<std::string>> m_copy_map;
         SDL_Renderer* m_renderer = nullptr;
         struct World {

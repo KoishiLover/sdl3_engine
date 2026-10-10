@@ -6,7 +6,7 @@
 
 #include <filesystem>
 
-#include "image.hpp"
+#include "Sprite.hpp"
 #include "../engine_log.hpp"
 #include<SDL3_image/SDL_image.h>
 
@@ -51,7 +51,7 @@ namespace engine {
         if (m_images.contains(img)) {
             log::warn("[lua] 图片资源 [{}]已存在，加载取消",img);
         }
-        m_images.insert_or_assign(std::string(img), Image(x,y,w,h,(_tex->second.get())));
+        m_images.insert_or_assign(std::string(img), Sprite(x,y,w,h,(_tex->second.get())));
         log::info("[lua] 图片资源 [{}] 创建成功",img);
     }
     void Renderer::SetImageState(std::string_view img ,BlendMode mode ,float r,float g,float b,float a) {
