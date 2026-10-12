@@ -70,6 +70,7 @@ namespace engine {
         void SetImageCenter(std::string_view img ,float x,float y);
         void SetLogicalPresentMode(int w, int h);
 
+
     };
 }
 #endif //SDL3_ENGINE_TEXTURE_HPP

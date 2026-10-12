@@ -89,6 +89,7 @@ namespace engine {
     }
     void Engine::OnDestroy() {
         EngineLogger::info("[engine] 开始销毁资源");
+        m_audio.Destroy();
         m_renderer.Destroy();
         m_window.Destroy();
         EngineLogger::info("[engine] 资源销毁结束 ，进程退出");
