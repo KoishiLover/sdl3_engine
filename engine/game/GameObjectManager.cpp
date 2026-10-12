@@ -4,3 +4,207 @@
 //
 
 #include "GameObjectManager.hpp"
+#include "../engine_log.hpp"
+namespace engine {
+    void GameObjectManager::Init() noexcept{
+        if (!m_initialized) {
+            m_initialized = true;
+            resetGameObjectsList();
+        }
+    }
+    void GameObjectManager::SetSpecialPause(Uint64 time) noexcept {
+        m_special_pause = time;
+        m_next_special_pause = time;
+    }
+    Uint64 GameObjectManager::GetSpecialPause() const noexcept {
+        return m_special_pause;
+    }
+    Uint64 GameObjectManager::UpdateNextSpecialPause() {
+        m_special_pause = m_next_special_pause;
+        if (m_next_special_pause > 0) {
+            --m_next_special_pause;
+        }
+        return m_special_pause;
+    }
+    void GameObjectManager::reset() noexcept {
+        m_bound_l = m_bound_r =m_bound_t = m_bound_b =0.0;
+        m_special_pause = m_next_special_pause = 0;
+        for (auto p = m_update_list.getFirst(); p != nullptr;) {
+            p = freeGameObject(p);
+        }
+        resetGameObjectsList();
+        m_objects_pool.reset();
+        m_memory.release();
+    }
+
+    void GameObjectManager::resetGameObjectsList() noexcept {
+        m_update_list.clear();
+        m_render_set.clear();
+        for (auto& list:m_group_list) {
+            list.clear();
+        }
+        m_cache_pairs.clear();
+    }
+    GameObject* GameObjectManager::freeGameObjectWithCallback(GameObject* const object) noexcept {
+        if (object->callbacks.kill.valid()) {
+            auto r = object->callbacks.kill(object);
+            if (!r.valid()) {
+                sol::error err = r;
+                EngineLogger::err("[lua]  调用回调函数 Kill 时出错 : {}",err.what());
+            }
+        }
+        auto const next = m_update_list.remove(object);
+        m_render_set.erase(object);
+        m_group_list[object->group].remove(object);
+        object->status = GameObjectStatus::Free;
+        m_objects_pool.free(object->id);
+        object->Reset();
+        return next;
+    }
+    GameObject* GameObjectManager::freeGameObject(GameObject* const object) noexcept {
+        auto const next = m_update_list.remove(object);
+        m_render_set.erase(object);
+        m_group_list[object->group].remove(object);
+        object->status = GameObjectStatus::Free;
+        m_objects_pool.free(object->id);
+        object->Reset();
+        return next;
+    }
+
+    void GameObjectManager::beforeUpdateCallback() {
+
+        for (auto p = m_update_list.getFirst(); p != nullptr;p = p->update_list_next) {
+            if (!isValid(p)) {
+                continue;
+            }
+            if (  p->callbacks.beforeUpdate.valid()) {
+                auto r = p->callbacks.beforeUpdate(p);
+                if (!r.valid()) {
+                    sol::error err = r;
+                    EngineLogger::err("[lua] 调用回调函数 beforeUpdateCallback 时出错 : {}",err.what());
+                }
+            }
+
+        }
+    }
+    void GameObjectManager::afterUpdateCallback() {
+
+        for (auto p = m_update_list.getFirst(); p != nullptr;p = p->update_list_next) {
+            if (!isValid(p)) {
+                continue;
+            }
+            if (p->callbacks.afterUpdate.valid()) {
+                auto r = p->callbacks.afterUpdate(p);
+                if (!r.valid()) {
+                    sol::error err = r;
+                    EngineLogger::err("[lua] 调用回调函数 afterUpdateCallback 时出错 : {}",err.what());
+                }
+            }
+
+        }
+    }
+    void GameObjectManager::updateCallback() {
+
+        for (auto p = m_update_list.getFirst(); p != nullptr;p = p->update_list_next) {
+            if (!isValid(p)) {
+                continue;
+            }
+            if (p->callbacks.update.valid()) {
+                auto r = p->callbacks.update(p);
+                if (!r.valid()) {
+                    sol::error err = r;
+                    EngineLogger::err("[lua]  调用回调函数 updateCallback 时出错 : {}",err.what());
+                }
+            }
+        }
+    }
+
+    void GameObjectManager::UpdateXY() noexcept {
+        //每帧递减暂停计数，并据此冻结运动（暂停只限制运动，不限制逻辑回调）
+        const auto pause = UpdateNextSpecialPause();
+        for (auto p = m_update_list.getFirst(); p != nullptr;p = p->update_list_next) {
+            if (!isValid(p) || (pause && !p->ignore_special_pause)) {
+                continue;
+            }
+            p->updateXY();
+        }
+    }
+    void GameObjectManager::UpdateLast() noexcept {
+        //暂停期间不推进「上一帧坐标 / 计时器」，让运动恢复后 resolve_move 的位移仍正确
+        const auto pause = GetSpecialPause();
+        for (auto p = m_update_list.getFirst(); p != nullptr;) {
+            switch (p->status) {
+                case GameObjectStatus::Killed:
+                    p = freeGameObjectWithCallback(p);
+                    break;
+                case GameObjectStatus::Destroyed:
+                    p =freeGameObject(p);
+                    break;
+                case GameObjectStatus::Active:
+                    if (!pause || p->ignore_special_pause) {
+                        p->updateLast();
+                    }
+                    p = p->update_list_next;
+                    break;
+                case GameObjectStatus::Free:
+                    EngineLogger::warn("[lua]  意外的情况:对标记为“Free”的GameObject执行UpdateLast操作");
+                    p =p->update_list_next;
+                    break;
+            }
+        }
+    }
+
+    void GameObjectManager::Render() {
+        for (const auto& p : m_render_set) {
+            if (!isValid(p) || p->hide ) {
+                continue;
+            }
+            if (p->callbacks.render.valid()) {
+                auto r = p->callbacks.render(p);
+                if (!r.valid()) {
+                    sol::error err = r;
+                    EngineLogger::err("[lua] 调用回调函数Render时出错  : {}" ,err.what());
+                }
+            }
+        }
+    }
+
+    void GameObjectManager::BoundCheck() {
+        for (GameObject* p = m_update_list.getFirst(); p != nullptr;p = p->update_list_next) {
+            if (!isValid(p) || !p->bound) {
+                continue;
+            }
+            if (!isInBound(p)) {
+                if (p->callbacks.kill.valid()) {
+                    auto r = p->callbacks.kill(p);
+                    if (!r.valid()) {
+                        sol::error err = r;
+                        EngineLogger::err("[lua]  调用回调函数Kill时出错 : {}",err.what());
+                    }
+                }
+                p->status = GameObjectStatus::Destroyed;
+            }
+        }
+    }
+
+    void GameObjectManager::CollisionCallback() {
+
+    }
+    void GameObjectManager::CollisionCheck(const Uint8 group1 ,const Uint8 group2) noexcept {
+
+    }
+
+    void GameObjectManager::setGroup(GameObject *object, Uint8 group) {
+        if (!isValid(object) || group >= OBJECT_GROUP_SIZE||object->group == group) { return; }
+        m_group_list[object->group].remove(object);
+        object->group = group;
+        m_group_list[group].add(object);
+    }
+
+    void GameObjectManager::setLayer(GameObject *object, double layer) {
+        if (!isValid(object)|| object->layer == layer) { return; }
+        m_render_set.erase(object);
+        object->layer = layer;
+        m_render_set.insert(object);
+    }
+}

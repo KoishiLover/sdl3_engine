@@ -8,135 +8,137 @@
 
 #include<SDL3/SDL_stdinc.h>
 #include<sol/sol.hpp>
-#include<limits>
-#include<vector>
+#include<cmath>
+#include<string>
 
 namespace engine {
+    class Image;
 
-    class Sprite;
-    class GameObject;
+    using Callback = sol::protected_function;
 
-    enum class GameObjectStatus {
-        Free,
-        Active,
-        Destroyed,
-        Killed
-    };
-    using callBack = sol::protected_function;
     struct GameObjectCallbacks {
-        callBack onCreateCallback;
-        std::vector<callBack>  beforeUpdateCallbacks;
-        callBack onUpdateCallback;
-        std::vector<callBack>  afterUpdateCallbacks;
-        callBack onRenderCallback;
-        callBack onColliCallbacks;
-        callBack onDestroyCallbacks;
+        Callback init;
+        Callback beforeUpdate;
+        Callback update;
+        Callback afterUpdate;
+        Callback render;
+        Callback collision;
+        Callback kill;
+        void reset() {
+            init.reset();
+            beforeUpdate.reset();
+            update.reset();
+            afterUpdate.reset();
+            render.reset();
+            collision.reset();
+            kill.reset();
+        }
     };
+    enum class GameObjectStatus {
+        Free ,
+        Active,
+        Killed,
+        Destroyed
+    };
+    struct GameObject {
+        //在对象池中的索引，全局对象唯一标识
+        Uint64 id;
+        Uint64 uid;
 
-    class GameObject {
-    public:
-        //链表部分
-        GameObject* update_list_prev;
+        GameObjectStatus status;
+
+        //更新链表结点
         GameObject* update_list_next;
-        GameObject* group_list_prev;
+        GameObject* update_list_prev;
+        //碰撞组链表结点
         GameObject* group_list_next;
+        GameObject* group_list_prev;
 
-        GameObject() = default;
-        ~GameObject() = default;
-    //GameObject 属性
-        double x ;
-        double y ;
-        double vx ;
-        double vy ;
-        double ax  ;
-        double ay ;
-        double rot;
-        double omega;
-        double rect_a ;
-        double rect_b ;
-        double col_r ;
-        double hscale ;
-        double vscale ;
+        //位置坐标
+        double x,y;
+        //速度分量
+        double vx , vy;
+        // 加速度分类
+        double ax , ay;
+        //角度 ,角度增量
+        double rot , omega;
+        //判断圆的半径
+        double col_r;
+        //矩形碰撞判定
+        double rect_a , rect_b;
 
-        double maxv ;
-        double max_vx,max_vy;
+        //图层
+        double layer;
+        //所属的碰撞组别
+        Uint8 group;
 
-        uint8_t hide: 1;  //是否渲染
-        uint8_t colli : 1  ;  // 是否启用碰撞检测
-        uint8_t rect : 1 ;   //是否为矩形碰撞
-        uint8_t navi : 1 ;   //渲染角度是否随着速度角度变化
-        uint8_t boundcheck : 1;// 是否开启边界检测
-        uint8_t last_xy_touched : 1;
-        uint8_t resolve_move : 1;
-        uint8_t ignore_pause : 1;
+        //图像资源
+        std::string img;
+        //计时器，动画计时器
+        Uint64 timer;
+        Uint64 ani_timer;
 
-        Uint64 timer ;
-        Uint64 ani_timer ;
-        Uint64 pause;
+        //方向是否根据运动自动方向调整
+        bool navi ;
+        //上一帧是否正确获取坐标(即游戏对象是否为该帧生成)
+        bool last_xy;
+        //是否进行出界检测
+        bool bound;
+        // 是否启动碰撞检测
+        bool colli;
+        //是否进行渲染
+        bool hide;
+        //是否为矩形判定
+        bool rect;
+        //是否无视特殊暂停
+        bool ignore_special_pause;
+        //
+        bool resolve_move;
 
-        double layer ;   //图层
-        Uint8 group ;  // 所属的碰撞组
-
-        Sprite* image ;
-
-        GameObjectStatus status ;
-
-
-        Uint64 uid ;
-    private:
-
-        double last_x ;
-        double last_y ;
-        double dx ;
-        double dy ;
-
-    public:
-        //回调函数
-        GameObjectCallbacks callbacks ;
-        void registerBeforeUpdateCallback(const callBack& call) {
-            callbacks.beforeUpdateCallbacks.push_back(call);
-        }
-        void registerAfterUpdateCallback(const callBack& call) {
-            callbacks.afterUpdateCallbacks.push_back(call);
-        }
+        double last_x ,last_y; //[不可见]
+        //回调函数集
+        GameObjectCallbacks callbacks;
 
         //接口
-        void UpdateMovement() noexcept ;
-        void UpdateLast() noexcept;
-        void setGroup(Uint8 group);
-        void setLayer(double layer);
 
+        //设置位置
+        inline void setPos(double _x,double _y) noexcept{ x = _x; y = _y;}
+        //设置速度
+        inline void setV (double v , double ang) noexcept {
+            vx = v * std::cos(ang) ; vy = v * std::sin(ang);
+        }
+        //设置速度分量
+        inline void setV2(double _vx,double _vy) noexcept{vx = _vx ; vy = _vy;}
+        //设置加速度
+        inline void setA(double _a , double ang) noexcept {
+            ax = _a * std::cos(ang) ; ay = _a * std::sin(ang);
+        }
+        //设置加速度分量
+        inline void setA2(double _ax ,double _ay) noexcept {ax = _ax ; ay = _ay;}
+        //设置图层
+        inline void setLayer(double _layer) noexcept { layer = _layer; }
+        //设置碰撞组
+        inline void setGroup(Uint8 _group) noexcept { group = _group; }
+        //设置碰撞矩阵
+        inline void setRect(double _a , double _b , bool _rect) noexcept {
+            rect_a = _a ; rect_b = _b; rect = _rect;
+            if (!rect) { col_r = std::min(_a , _b);}
+        }
         //内部调用
         void Reset();
-        [[nodiscard]] double calculateSpeed()const noexcept {
-            return std::hypot(vx,vy);
-        }
-        [[nodiscard]] double calculateSpeedDirection()const noexcept {
+        [[nodiscard]]inline double calculateSpeed() const noexcept { return std::hypot(vx,vy); }
+        [[nodiscard]]inline double calculateSpeedDirection() const noexcept {
             if (abs(vx) > std::numeric_limits<double>::min() && abs(vy) > std::numeric_limits<double>::min()) {
                 return std::atan2(vy,vx);
             }
             return rot;
         }
-        void setSpeed(double const speed)noexcept {
-            if (auto const cur = calculateSpeed() ; cur > std::numeric_limits<double>::min()) {
-                auto const a3 = speed / cur;
-                vx *= a3;
-                vy *= a3;
-            }
-            else {
-                vx = std::cos(rot) * speed;
-                vy = std::sin(rot) * speed;
-            }
-        }
-        void setSpeedDirection(double const direction) noexcept {
-            if (auto const speed = calculateSpeed() ; speed > std::numeric_limits<double>::min()) {
-                vx = speed * std::cos(direction);
-                vy = speed * std::sin(direction);
-            } else {
-                rot = direction;
-            }
-        }
+        void updateXY() noexcept;
+        void updateLast() noexcept;
+        //void changeResource();
     };
+
+
 } // engine
 
 #endif //HATTA_ENGINE_GAMEOBJECT_HPP

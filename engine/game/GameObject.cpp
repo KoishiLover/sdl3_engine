@@ -4,98 +4,73 @@
 //
 
 #include "GameObject.hpp"
-#include<algorithm>
 #include<cfloat>
 namespace engine {
-
     void GameObject::Reset() {
-        update_list_prev = nullptr;
-        update_list_next = nullptr;
-        group_list_next = nullptr;
-        group_list_prev = nullptr;
-
-        status = GameObjectStatus::Free;
+        update_list_next = update_list_prev = nullptr;
+        group_list_next = group_list_prev = nullptr;
 
         x = y = 0.0;
-        last_x = last_y = 0.0;
-        vx =  vy = 0.0;
-        rot = 0.0;
-        omega = 0.0;
+        vx = vy = 0.0;
         ax = ay = 0.0;
-        maxv = DBL_MAX;
-        max_vx = max_vy = DBL_MAX;
-
-        rect = false;
-        rect_a = rect_b = 0.0;
-        col_r = 0.0;
-
-        hscale = vscale = 1.0;
-
+        rot = omega = 0.0;
         layer = 0.0;
         group = 0;
+        last_x = last_y = 0.0;
+        col_r = rect_a = rect_b = 0.0;
+
+        navi = false ;
         colli = true;
-        boundcheck = true;
+        last_xy = false;
+        rect = false;
+        ignore_special_pause = false;
+        resolve_move = false;
         hide = false;
-        navi = false;
+        bound = false;
+
+        img = "";
 
         ani_timer = 0;
         timer = 0;
-        image  = nullptr;
+
+        callbacks.reset();
+
+        uid = 0;
+
+        status = GameObjectStatus::Free;
     }
 
-    void GameObject::UpdateMovement() noexcept {
-        if (!ignore_pause && pause > 0 ) {
-            --pause;
-            return;
-        }
-        if (!resolve_move) {
-            vx += ax;
+    void GameObject::updateXY()  noexcept {
+        if (! resolve_move) {
+            vx += ax ;
             vy += ay;
-            if (maxv <= DBL_MIN) {
-                vx = vy  =0.0;
-            }
-            else if (const double cur_v = calculateSpeed(); cur_v > maxv ) {
-                auto const cur_d = calculateSpeedDirection();
-                vx = maxv * std::cos(cur_d);
-                vy = maxv * std::sin(cur_d);
-            }
-            vx = std::clamp(vx , -max_vx ,max_vx);
-            vy = std::clamp(vy ,-max_vy ,max_vy);
 
             x += vx;
             y += vy;
-        }
-        else {
-            if (last_xy_touched) {
-                vx = x - last_x ;
-                vy = y - last_y ;
-            }
-            else {
-                vx = 0.0;
-                vy = 0.0;
+        } else {
+            if (last_xy) {
+                vx = x - last_x;
+                vy = y - last_y;
+            } else {
+                vx = vy = 0.0;
             }
         }
         rot += omega;
-        if (navi && last_xy_touched) {
-            auto const ddx = x -last_x;
-            auto const ddy = y -last_y;
-            if (std::abs(ddx) > DBL_MIN || std::abs(ddy) > DBL_MIN) {
-                rot = std::atan2 (ddy ,ddx);
+        if (navi && last_xy) {
+            auto const dx = x - last_x;
+            auto const dy = y - last_y;
+            if (std::abs(dx) > DBL_MIN && std::abs(dy) > DBL_MIN) {
+                rot = std::atan2(dy,dx);
             }
         }
     }
-    void GameObject::UpdateLast() noexcept {
-        if (!last_xy_touched) {
-            dx = 0.0;
-            dy = 0.0;
-        } else {
-            dx = x - last_x;
-            dy = y - last_y;
-        }
-        last_xy_touched = true;
-        last_x =  x;
+
+    void GameObject::updateLast() noexcept {
+        last_xy = true;
+        last_x = x;
         last_y = y;
-        ++ timer;
-        ++ ani_timer;
+        ++timer;
+        ++ani_timer;
     }
+
 } // engine
