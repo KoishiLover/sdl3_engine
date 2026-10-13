@@ -91,7 +91,11 @@ namespace engine {
 
 namespace engine {
     bool LuaWrapper::Init(sol::state &m_lua) {
-        m_lua.open_libraries(sol::lib::base , sol::lib::jit,sol::lib::ffi , sol::lib::package );
+        m_lua.open_libraries(
+                sol::lib::base, sol::lib::package, sol::lib::coroutine,
+                sol::lib::string, sol::lib::table, sol::lib::math,
+                sol::lib::io, sol::lib::os,
+                sol::lib::jit, sol::lib::ffi );
         sol::table engine = m_lua.create_table("hatta");
         engine.set_function("SetFPS" ,&LuaWrapper::LW_SetFPS);
         engine.set_function("SetTitle" ,&LuaWrapper::LW_SetTitle);
@@ -126,6 +130,9 @@ namespace engine {
         //键盘输入
         engine.set_function("GetKeyState",        &LuaWrapper::LW_GetKeyState);
         engine.set_function("IsKeyDown",          &LuaWrapper::LW_IsKeyDown);
+
+        //对象系统绑定（Object.New / GameObject usertype / 混合 __index/__newindex）
+        GameObjectBind(m_lua);
 
         return m_lua["jit"].valid();
     }

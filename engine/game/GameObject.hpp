@@ -99,8 +99,14 @@ namespace engine {
         //回调函数集
         GameObjectCallbacks callbacks;
 
-        //接口
+        ///@breif lua脚本的实例表 脚本自定义字段写在这
+        sol::object lObject;
 
+        bool operator<(const GameObject& obj) const noexcept {return id < obj.id;}
+        bool operator==(const GameObject& obj) const noexcept {return id == obj.id;}
+        bool operator<=(const GameObject& obj) const noexcept {return id <= obj.id;}
+
+        //接口
         //设置位置
         inline void setPos(double _x,double _y) noexcept{ x = _x; y = _y;}
         //设置速度

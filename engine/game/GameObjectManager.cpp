@@ -207,4 +207,23 @@ namespace engine {
         object->layer = layer;
         m_render_set.insert(object);
     }
+
+    GameObject *GameObjectManager::New() {
+        size_t id ;
+        m_objects_pool.alloc(id);
+        if (id == static_cast<size_t>(-1)) {
+            EngineLogger::err("[lua]  对象池已满，创建失败");
+            return nullptr;
+        }
+        GameObject* object = m_objects_pool.object(id);
+        object->Reset();
+        object->id = id;
+        object->uid = ++m_uid;
+        object->status = GameObjectStatus::Active;
+        m_update_list.add(object);
+        m_render_set.insert(object);
+        m_group_list[0].add(object);
+
+        return object;
+    }
 }

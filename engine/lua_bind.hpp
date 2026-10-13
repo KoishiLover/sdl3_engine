@@ -37,6 +37,7 @@ namespace engine {
         static bool LW_GetKeyState(int key)noexcept;
         static bool LW_IsKeyDown(int key)noexcept;
         [[nodiscard]] static bool Init(sol::state &m_lua );
+        static void GameObjectBind(sol::state &m_lua);
 
     };
 }

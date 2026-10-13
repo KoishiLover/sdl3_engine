@@ -294,6 +294,8 @@ namespace engine {
         void CollisionCheck(const Uint8 group1 , const Uint8 group2 ) noexcept;
         //执行碰撞回调
         void CollisionCallback();
+
+        GameObject* New();
     };
 #define IMGR GameObjectManager::getInstance()
 }
