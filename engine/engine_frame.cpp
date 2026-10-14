@@ -6,6 +6,7 @@
 #include"engine_log.hpp"
 #include"engine_window.hpp"
 #include"lua_bind.hpp"
+#include"game/GameObjectManager.hpp"
 #include<filesystem>
 #include<format>
 namespace engine {
@@ -87,12 +88,25 @@ namespace engine {
         GameRender();
         SDL_RenderPresent(m_renderer.GetRenderer());
     }
-    void Engine::OnDestroy() {
+    void Engine::ReleaseResources() {
         EngineLogger::info("[engine] 开始销毁资源");
+        //回收游戏对象系统：清空所有对象、重置对象池、释放 pmr 内存
+        IMGR.reset();
         m_audio.Destroy();
         m_renderer.Destroy();
         m_window.Destroy();
-        EngineLogger::info("[engine] 资源销毁结束 ，进程退出");
+        EngineLogger::info("[engine] 资源销毁结束");
+    }
+
+    void Engine::OnExit() {
+        ReleaseResources();
+        EngineLogger::info("[engine] 进程正常退出");
+        exit(EXIT_SUCCESS);
+    }
+
+    void Engine::OnDestroy() {
+        ReleaseResources();
+        EngineLogger::info("[engine] 进程异常退出");
         exit(EXIT_FAILURE);
     }
 
@@ -119,7 +133,9 @@ namespace engine {
             //结束一次循环
             m_controller.EndFrame();
         }
-        if (m_status == EngineStatus::OnDestroy) {
+        if (m_status == EngineStatus::OnExit) {
+            OnExit();
+        } else if (m_status == EngineStatus::OnDestroy) {
             OnDestroy();
         }
 
@@ -273,6 +289,10 @@ namespace engine {
         return m_controller.GetFPS();
     }
 
+    void Engine::GameExit() noexcept {
+        m_status = EngineStatus::OnExit;
+    }
+
     void Engine::LoadTexture(std::string_view path,std::string_view name) {
         m_renderer.LoadTexture(path,name);
     }
@@ -290,6 +310,12 @@ namespace engine {
     }
     void Engine::SetImageCenter(std::string_view img ,float x,float y) {
         m_renderer.SetImageCenter(img,x,y);
+    }
+    void Engine::AddWorld(int id, int left, int right, int top, int bottom) {
+        m_renderer.AddWorld(id,left,right,top,bottom);
+    }
+    void Engine::SetWorldID(int id) {
+        m_renderer.SetWorldID(id);
     }
     void Engine::SetLogicalPresentMode(int w, int h) {
         m_renderer.SetLogicalPresentMode(w,h);

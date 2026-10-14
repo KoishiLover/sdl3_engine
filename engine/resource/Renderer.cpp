@@ -105,7 +105,7 @@ namespace engine {
                 log::err("[lua] 调用函数 DrawImage 时出错:{}",SDL_GetError());
                 return;
             }
-            if (!SDL_SetTextureAlphaMod(_img.m_tex,a)) {
+            if (!SDL_SetTextureAlphaModFloat(_img.m_tex,a)) {
                 log::err("[lua] 调用函数 DrawImage 时出错:{}",SDL_GetError());
                 return;
             }
@@ -131,10 +131,11 @@ namespace engine {
 
     void Renderer::SetLogicalPresentMode(int w, int h) {
         using log = EngineLogger;
+        //逻辑尺寸要先记下来：世界坐标渲染要用它把世界中心映射到屏幕中心
+        m_logic_w = w;
+        m_logic_h = h;
         if (!SDL_SetRenderLogicalPresentation(m_renderer , w, h,SDL_LOGICAL_PRESENTATION_LETTERBOX)) {
             log::err("[engine] 调用函数 SetLogicalPresentMode 时出错:{}",SDL_GetError());
-            m_logic_w = w;
-            m_logic_h = h;
         }
     }
 

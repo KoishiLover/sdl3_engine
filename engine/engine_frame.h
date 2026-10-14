@@ -18,7 +18,8 @@ namespace engine {
         UnInitialized,
         Initializing,
         Running,
-        OnDestroy,
+        OnExit,     // 正常退出（Lua 调用 GameExit）
+        OnDestroy,  // 异常退出（窗口关闭 / 初始化失败）
     };
 
     class Engine {
@@ -56,7 +57,11 @@ namespace engine {
         void OnUpdate();
         ///@brief 渲染
         void OnRender();
-        ///@brief 退出进程
+        ///@brief 清理资源（音频/渲染器/窗口）
+        void ReleaseResources();
+        ///@brief 正常退出进程
+        void OnExit();
+        ///@brief 异常退出进程
         void OnDestroy();
         ///@brief 加载Lua 脚本
         bool LoadLuaScripts();
@@ -74,6 +79,8 @@ namespace engine {
         void SetResolution(Uint64 width, Uint64 height)noexcept;
         void SetVsync(bool v)noexcept;
         [[nodiscard]]float GetFPS()const noexcept;
+        //请求退出游戏：状态置为 OnExit，帧循环结束后清理资源并正常退出
+        void GameExit() noexcept;
         //渲染接口
         void LoadTexture(std::string_view path,std::string_view name);
         void LoadImage(std::string_view name , std::string_view tex , float x,float y ,float w,float h);
@@ -82,6 +89,9 @@ namespace engine {
         void SetImageScale(float scale);
         void SetImageCenter(std::string_view img ,float x,float y);
         void SetLogicalPresentMode(int w, int h);
+        //世界坐标渲染：注册世界边界 / 切换当前世界
+        void AddWorld(int id, int left, int right, int top, int bottom);
+        void SetWorldID(int id);
         //音频接口
         void LoadMusic(const std::string& name,std::string_view path ,Uint32 start,Uint32 end ,int loop) noexcept;
         void PlayMusic(std::string_view name) const noexcept;

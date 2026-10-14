@@ -55,10 +55,10 @@ namespace engine {
             float left,right;
             float top,bottom;
         };
-        std::array<World ,4> m_worlds;
+        std::array<World ,8> m_worlds;
         int m_world_id = -1;
-        int m_logic_w;
-        int m_logic_h;
+        int m_logic_w = 0;
+        int m_logic_h = 0;
         float m_scale = 1.0f;
     public:
         //接口
@@ -70,6 +70,19 @@ namespace engine {
         void SetImageCenter(std::string_view img ,float x,float y);
         void SetLogicalPresentMode(int w, int h);
 
+        ///@brief 切换当前渲染的世界：-1 表示普通渲染模式，其余取值需在 [0, m_worlds.size()) 内
+        inline void SetWorldID(int id) noexcept {
+            if (id < -1 || id >= static_cast<int>(m_worlds.size())) return;
+            m_world_id = id;
+        }
+        ///@brief 注册/设置一个世界区域的边界：id 需在 [0, m_worlds.size()) 内
+        inline void AddWorld(int id ,int left,int right,int top,int bottom) noexcept {
+            if (id < 0 || id >= static_cast<int>(m_worlds.size())) return;
+            m_worlds[id].left = left;
+            m_worlds[id].right = right;
+            m_worlds[id].top = top;
+            m_worlds[id].bottom = bottom;
+        }
 
     };
 }

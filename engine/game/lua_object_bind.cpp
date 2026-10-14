@@ -23,6 +23,11 @@ namespace {
         return *static_cast<GameObject**>(lua_touserdata(L, 1));
     }
 
+    ///@brief 空析构（__gc）：对象归 GameObjectManager 的对象池所有，Lua 不拥有它，绝不能在这里销毁
+    int NoopDestroy(lua_State*) {
+        return 0;
+    }
+
     // ==== C++ 字段访问：编译期编号 + 函数指针（零 std::function、零哈希）====
     ///@brief 读字段：把值 push 到 L 栈顶
     using FieldGetter = void (*)(GameObject&, lua_State*);
@@ -55,6 +60,7 @@ namespace {
     enum class FieldId : uint8_t {
         X, Y, VX, VY, AX, AY, ROT, OMEGA, COL_R, RECT_A, RECT_B,
         NAVI, BOUND, COLLI, HIDE, RECT, IGNORE_SPECIAL_PAUSE, RESOLVE_MOVE,
+        TIMER, ANI_TIMER,
         NONE
     };
 
@@ -83,6 +89,8 @@ namespace {
         { &getField<&GameObject::rect>,   &setField<&GameObject::rect> },
         { &getField<&GameObject::ignore_special_pause>, &setField<&GameObject::ignore_special_pause> },
         { &getField<&GameObject::resolve_move>,         &setField<&GameObject::resolve_move> },
+        { &getField<&GameObject::timer>,     &setField<&GameObject::timer> },
+        { &getField<&GameObject::ani_timer>, &setField<&GameObject::ani_timer> },
     };
 
     ///@brief 字符串 → 字段编号（长度 + 字符分发，替代哈希）
@@ -119,10 +127,14 @@ namespace {
                 if (key == "col_r") return FieldId::COL_R;
                 if (key == "bound") return FieldId::BOUND;
                 if (key == "colli") return FieldId::COLLI;
+                if (key == "timer") return FieldId::TIMER;
                 return FieldId::NONE;
             case 6:
                 if (key == "rect_a") return FieldId::RECT_A;
                 if (key == "rect_b") return FieldId::RECT_B;
+                return FieldId::NONE;
+            case 9:
+                if (key == "ani_timer") return FieldId::ANI_TIMER;
                 return FieldId::NONE;
             case 12:
                 if (key == "resolve_move") return FieldId::RESOLVE_MOVE;
@@ -162,11 +174,18 @@ namespace {
             lua_pop(L, 2);
         }
 
-        // 3. sol2 方法（SetPos / GetSpeed / SetGroup ...）
+        // 3. 回落 sol2：usertype 的 __index 可能是「方法表」，也可能是函数，分别处理
         lua_pushvalue(L, lua_upvalueindex(1));
-        lua_pushvalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_call(L, 2, 1);
+        if (lua_isfunction(L, -1)) {
+            lua_pushvalue(L, 1);
+            lua_pushvalue(L, 2);
+            lua_call(L, 2, 1);
+        } else {
+            // 表：直接 table[key]（sol2 的 __index 就是方法表）
+            lua_pushvalue(L, 2);
+            lua_gettable(L, -2);
+            lua_remove(L, -2);
+        }
         return 1;
     }
 
@@ -251,6 +270,14 @@ void LuaWrapper::GameObjectBind(sol::state& lua) {
     lua_pushcclosure(L, &ObjectNewIndex, 0);
     lua_setfield(L, mt, "__newindex");
 
+    // __gc：sol2 的 detail::make_destructor<T>() 对「指针型 usertype」一律返回 cannot_destroy
+    // （stack_core.hpp：非 unique 且 is_pointer → cannot_destroy），对象被回收时会抛
+    // "cannot call the destructor for ..."。enrollments.destructor = false 也拦不住它
+    // （usertype_storage 注册 __gc 时根本不看这个标志）。
+    // 对象归对象池所有、Lua 只是引用，这里覆盖成空实现，语义上也正确。
+    lua_pushcfunction(L, &NoopDestroy);
+    lua_setfield(L, mt, "__gc");
+
     lua_pop(L, 1);
 
     // 3. hatta.Object.New(class, args...)
@@ -294,6 +321,42 @@ void LuaWrapper::GameObjectBind(sol::state& lua) {
             }
             return obj;
         });
+
+    // 4. 管理器接口（hatta.Object.*）
+    object_api.set_function("Count",    [&manager] { return manager.Count(); });
+    object_api.set_function("Capacity", [] { return GameObjectManager::Capacity(); });
+    object_api.set_function("Clear",    [&manager] { manager.Clear(); });
+    object_api.set_function("SetBound", [&manager](double left, double right, double top, double bottom) {
+        if (left > right || bottom > top) {
+            EngineLogger::warn("[lua] Object.SetBound: 边界顺序错误（需 left<=right 且 bottom<=top），已忽略");
+            return;
+        }
+        manager.SetBound(left, right, top, bottom);
+    });
+    object_api.set_function("IsInBound", [&manager](double x, double y) {
+        return manager.isInBound(x, y);
+    });
+    object_api.set_function("Pause", [&manager](int frames) {
+        manager.SetSpecialPause(frames > 0 ? static_cast<Uint64>(frames) : 0);
+    });
+    object_api.set_function("IsPaused", [&manager] { return manager.isPaused(); });
+    object_api.set_function("Collision", [&manager](int group_a, int group_b) {
+        if (group_a < 0 || group_a >= OBJECT_GROUP_SIZE || group_b < 0 || group_b >= OBJECT_GROUP_SIZE) {
+            EngineLogger::warn("[lua] Object.Collision: 组号越界，已忽略（取值 [0,16)）");
+            return;
+        }
+        manager.CollisionCheck(static_cast<Uint8>(group_a), static_cast<Uint8>(group_b));
+        manager.CollisionCallback();
+    });
+
+    // 5. 帧驱动接口：调用时机与顺序由开发者自行决定（引擎不会自动调用）
+    object_api.set_function("BeforeUpdate", [&manager] { manager.beforeUpdateCallback(); });
+    object_api.set_function("Update",       [&manager] { manager.updateCallback(); });
+    object_api.set_function("AfterUpdate",  [&manager] { manager.afterUpdateCallback(); });
+    object_api.set_function("UpdateXY",     [&manager] { manager.UpdateXY(); });
+    object_api.set_function("UpdateLast",   [&manager] { manager.UpdateLast(); });
+    object_api.set_function("BoundCheck",   [&manager] { manager.BoundCheck(); });
+    object_api.set_function("Render",       [&manager] { manager.Render(); });
 }
 
 } // namespace engine

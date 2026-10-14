@@ -5,7 +5,22 @@
 
 #include "GameObjectManager.hpp"
 #include "../engine_log.hpp"
+#include <cmath>
 namespace engine {
+    namespace {
+        ///@brief 两个对象是否重叠：双方都用矩形判定时做 AABB，否则一律按圆判定
+        bool objectsOverlap(const GameObject* a ,const GameObject* b) noexcept {
+            const double dx = a->x - b->x;
+            const double dy = a->y - b->y;
+            if (a->rect && b->rect) {
+                return std::abs(dx) <= (a->rect_a + b->rect_a)
+                    && std::abs(dy) <= (a->rect_b + b->rect_b);
+            }
+            const double r = a->col_r + b->col_r;
+            return (dx * dx + dy * dy) <= (r * r);
+        }
+    }
+
     void GameObjectManager::Init() noexcept{
         if (!m_initialized) {
             m_initialized = true;
@@ -187,11 +202,62 @@ namespace engine {
         }
     }
 
-    void GameObjectManager::CollisionCallback() {
-
-    }
     void GameObjectManager::CollisionCheck(const Uint8 group1 ,const Uint8 group2) noexcept {
+        m_cache_pairs.clear();
+        if (group1 >= OBJECT_GROUP_SIZE || group2 >= OBJECT_GROUP_SIZE) {
+            return;
+        }
+        //判定阶段只收集命中对，不执行回调：避免回调里增删对象破坏遍历
+        const bool self = (group1 == group2);
+        for (auto p1 = m_group_list[group1].getFirst(); p1 != nullptr; p1 = p1->group_list_next) {
+            if (!isValid(p1) || !p1->colli) {
+                continue;
+            }
+            //组内自撞时从 p1 的下一个开始，保证每一对只判定一次
+            for (auto p2 = self ? p1->group_list_next : m_group_list[group2].getFirst();
+                 p2 != nullptr; p2 = p2->group_list_next) {
+                if (!isValid(p2) || !p2->colli) {
+                    continue;
+                }
+                if (objectsOverlap(p1 ,p2)) {
+                    m_cache_pairs.push_back(CollisionPairs{p1 ,p2});
+                }
+            }
+        }
+    }
+    void GameObjectManager::CollisionCallback() {
+        for (const auto& [object1 ,object2] : m_cache_pairs) {
+            if (isValid(object1) && object1->callbacks.collision.valid()) {
+                auto r = object1->callbacks.collision(object1 ,object2);
+                if (!r.valid()) {
+                    sol::error err = r;
+                    EngineLogger::err("[lua] 调用回调函数Collision时出错 : {}",err.what());
+                }
+            }
+            if (isValid(object2) && object2->callbacks.collision.valid()) {
+                auto r = object2->callbacks.collision(object2 ,object1);
+                if (!r.valid()) {
+                    sol::error err = r;
+                    EngineLogger::err("[lua] 调用回调函数Collision时出错 : {}",err.what());
+                }
+            }
+        }
+        m_cache_pairs.clear();
+    }
 
+    size_t GameObjectManager::Count() const noexcept {
+        size_t n = 0;
+        for (auto p = m_update_list.getFirst(); p != nullptr; p = p->update_list_next) {
+            if (isValid(p)) {
+                ++n;
+            }
+        }
+        return n;
+    }
+    void GameObjectManager::Clear() {
+        for (auto p = m_update_list.getFirst(); p != nullptr;) {
+            p = freeGameObjectWithCallback(p);
+        }
     }
 
     void GameObjectManager::setGroup(GameObject *object, Uint8 group) {

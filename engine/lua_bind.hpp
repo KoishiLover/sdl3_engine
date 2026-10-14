@@ -18,6 +18,7 @@ namespace engine {
         static void LW_SetVsync(bool v);
         static void LW_SetResolution(int width, int height);
         static float LW_GetFPS()noexcept;
+        static void LW_GameExit()noexcept;
         static void LW_LoadTexture(std::string_view path,std::string_view name);
         static void LW_LoadImage(std::string_view name , std::string_view tex , float x,float y ,float w,float h);
         static void LW_DrawImage(std::string_view img , float x,float y,float rot ,float scale);
@@ -25,6 +26,8 @@ namespace engine {
         static void LW_SetImageScale(float scale);
         static void LW_SetImageCenter(std::string_view img ,float x,float y);
         static void LW_SetLogicalPresentMode(int w, int h);
+        static void LW_AddWorld(int id, int left, int right, int top, int bottom);
+        static void LW_SetWorldID(int id);
         static void LW_LoadMusic(const std::string& name,std::string_view path ,Uint32 start,Uint32 end ,int loop) noexcept;
         static void LW_PlayMusic(std::string_view name)  noexcept;
         static void LW_StopMusic(std::string_view name) noexcept;

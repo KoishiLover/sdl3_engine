@@ -29,6 +29,10 @@ namespace engine {
         return IENGINE.GetFPS();
     }
 
+    void LuaWrapper::LW_GameExit() noexcept {
+        IENGINE.GameExit();
+    }
+
     ////渲染相关
     void LuaWrapper::LW_LoadTexture(std::string_view path,std::string_view name) {
         IENGINE.LoadTexture(path,name);
@@ -50,6 +54,12 @@ namespace engine {
     }
     void LuaWrapper::LW_SetLogicalPresentMode(int w, int h) {
         IENGINE.SetLogicalPresentMode(w,h);
+    }
+    void LuaWrapper::LW_AddWorld(int id, int left, int right, int top, int bottom) {
+        IENGINE.AddWorld(id,left,right,top,bottom);
+    }
+    void LuaWrapper::LW_SetWorldID(int id) {
+        IENGINE.SetWorldID(id);
     }
     /////音频相关
     void LuaWrapper::LW_LoadMusic(const std::string& name,std::string_view path ,Uint32 start,Uint32 end ,int loop) noexcept {
@@ -103,6 +113,7 @@ namespace engine {
         engine.set_function("SetResolution" ,&LuaWrapper::LW_SetResolution);
         engine.set_function("SetWindowed" ,&LuaWrapper::LW_SetWindowed);
         engine.set_function("GetFPS" ,&LuaWrapper::LW_GetFPS);
+        engine.set_function("GameExit" ,&LuaWrapper::LW_GameExit);
         //渲染相关
         engine.new_enum("BlendMode",
             "None",BlendMode::None,
@@ -117,6 +128,8 @@ namespace engine {
         engine.set_function("SetImageScale",      &LuaWrapper::LW_SetImageScale);
         engine.set_function("SetImageCenter",     &LuaWrapper::LW_SetImageCenter);
         engine.set_function("SetLogicalPresentSize",  &LuaWrapper::LW_SetLogicalPresentMode);
+        engine.set_function("AddWorld",               &LuaWrapper::LW_AddWorld);
+        engine.set_function("SetWorldID",             &LuaWrapper::LW_SetWorldID);
         //音频相关
         engine.set_function("LoadMusic",          &LuaWrapper::LW_LoadMusic);
         engine.set_function("PlayMusic",          &LuaWrapper::LW_PlayMusic);

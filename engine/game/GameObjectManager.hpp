@@ -262,14 +262,27 @@ namespace engine {
                     && object->y <= m_bound_t
                     && object->y >= m_bound_b;
         }
+        ///@brief 坐标点是否在舞台边界内（世界坐标 y 轴向上）
+        [[nodiscard]] bool isInBound(double x ,double y) const noexcept {
+            return  x <= m_bound_r && x >= m_bound_l
+                    && y <= m_bound_t && y >= m_bound_b;
+        }
 
         //==== 暂停 ====
         ///@brief 请求特殊暂停 frames 帧
         void SetSpecialPause(Uint64 time) noexcept;
         ///@brief 当前剩余暂停帧数
         [[nodiscard]] Uint64 GetSpecialPause() const noexcept;
+        ///@brief 当前是否处于全局暂停中
+        [[nodiscard]] bool isPaused() const noexcept { return m_special_pause > 0; }
 
         //==== 对象管理 ====
+        ///@brief 当前存活对象数量
+        [[nodiscard]] size_t Count() const noexcept;
+        ///@brief 对象池容量
+        [[nodiscard]] static constexpr size_t Capacity() noexcept { return OBJECT_POOL_SIZE; }
+        ///@brief 立即回收所有对象（会为每个对象触发一次 kill 回调）
+        void Clear();
         void setGroup(GameObject* object , Uint8 group);
         void setLayer(GameObject* object , double layer);
 
