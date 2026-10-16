@@ -164,8 +164,12 @@ namespace {
         }
 
         // 2. 脚本实例表（普通索引，沿 instance → class，能查到类方法）
+        //    注意：必须用 sol::stack::push(L, ...) 压到「当前 L」上。
+        //    不能用 go->lObject.push()：它压到 lObject 自己记录的那个 state 上，
+        //    如果这段代码是被协程调用的（L 是协程栈），两边栈就错位了 → 访问违例。
+        //    注册表引用是全线程共享的，所以换 L 压栈是安全的。
         if (go->lObject.valid() && go->lObject.is<sol::table>()) {
-            go->lObject.push();
+            sol::stack::push(L, go->lObject);
             lua_pushvalue(L, 2);
             lua_gettable(L, -2);
             if (!lua_isnil(L, -1)) {
@@ -205,8 +209,9 @@ namespace {
         }
 
         // 2. 脚本实例表（self.speed 这类）
+        //    同 __index：必须压到当前 L，不能用 go->lObject.push()（协程下会栈错位）
         if (go->lObject.valid() && go->lObject.is<sol::table>()) {
-            go->lObject.push();
+            sol::stack::push(L, go->lObject);
             lua_pushvalue(L, 2);
             lua_pushvalue(L, 3);
             lua_rawset(L, -3);

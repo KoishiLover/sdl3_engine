@@ -13,7 +13,7 @@
 #include<set>
 #include"GameObject.hpp"
 #include<vector>
-#define OBJECT_POOL_SIZE  16384 // 对象池最大容量
+#define OBJECT_POOL_SIZE  32768 // 对象池最大容量
 #define OBJECT_GROUP_SIZE 16    // 碰撞组数
 
 namespace engine {

@@ -22,6 +22,15 @@ namespace engine {
             return sv1 == sv2;
         }
     };
+
+    ///@brief 世界坐标区域（y 轴向上：left <= right、bottom <= top）
+    ///@note 图象（Renderer）和文字（TextRender）共用这个概念，保证两边的世界换算完全一致
+    struct World {
+        float left   = 0.0f;
+        float right  = 0.0f;
+        float top    = 0.0f;
+        float bottom = 0.0f;
+    };
 }
 
 #endif //SDL3_ENGINE_ENGINE_UTILS_HPP

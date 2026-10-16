@@ -10,6 +10,7 @@
 #include<sol/state.hpp>
 #include"resource/Renderer.hpp"
 #include"resource/Audio.hpp"
+#include"resource/TextRender.hpp"
 #include"input/Input.hpp"
 namespace engine {
 
@@ -35,6 +36,7 @@ namespace engine {
         EngineStatus m_status = EngineStatus::UnInitialized;
         EngineWindow m_window ;
         Renderer m_renderer;
+        TextRender m_text;
         Audio  m_audio;
         FrameController m_controller ;
         Input m_input;
@@ -92,6 +94,15 @@ namespace engine {
         //世界坐标渲染：注册世界边界 / 切换当前世界
         void AddWorld(int id, int left, int right, int top, int bottom);
         void SetWorldID(int id);
+        //文本接口
+        void LoadTTF(std::string_view name, std::string_view path, float ptsize);
+        void DrawText(std::string_view ttf, std::string_view text, int l, int r, int t, int b);
+        void SetTextSize(float size, std::string_view ttf);
+        void SetTextColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+        void SetTextAlign(TextRender::HAlign h, TextRender::VAlign v);
+        //文本世界坐标：和图像的世界表相互独立
+        void AddTextWorld(int id, int left, int right, int top, int bottom);
+        void SetTextWorldID(int id);
         //音频接口
         void LoadMusic(const std::string& name,std::string_view path ,Uint32 start,Uint32 end ,int loop) noexcept;
         void PlayMusic(std::string_view name) const noexcept;

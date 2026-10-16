@@ -51,10 +51,7 @@ namespace engine {
         std::unordered_map<std::string , Sprite ,StringHash,StringEqual> m_images;
         std::unordered_map<std::string ,std::set<std::string>> m_copy_map;
         SDL_Renderer* m_renderer = nullptr;
-        struct World {
-            float left,right;
-            float top,bottom;
-        };
+        //World 定义在 engine_utils.hpp，和 TextRender 共用
         std::array<World ,8> m_worlds;
         int m_world_id = -1;
         int m_logic_w = 0;

@@ -9,6 +9,15 @@
 #include"game/GameObjectManager.hpp"
 #include<filesystem>
 #include<format>
+//注意：windows.h 会把 LoadImage / DrawText 定义成宏（LoadImageA / DrawTextA），
+//一旦某个 TU 引入了 windows.h，Engine::LoadImage / Engine::DrawText 就会被宏破坏。
+//凡是那种 TU，都要先撤掉这两个宏（下面的 #undef 就是为此准备的）。
+#ifdef LoadImage
+#undef LoadImage
+#endif
+#ifdef DrawText
+#undef DrawText
+#endif
 namespace engine {
 
     bool Engine::Init() {
@@ -40,6 +49,11 @@ namespace engine {
             return false;
         }
         log::info("[engine] SDL 渲染器 创建成功");
+
+        if (!m_text.Init(m_renderer.GetRenderer())) {
+            log::err("[engine]  引擎初始化失败,创建文本渲染系统时失败,初始化已结束");
+            return false;
+        }
 
         if (!m_audio.Init()) {
             log::err("[engine]  引擎初始化失败，创建音频系统时失败");
@@ -92,6 +106,7 @@ namespace engine {
         EngineLogger::info("[engine] 开始销毁资源");
         //回收游戏对象系统：清空所有对象、重置对象池、释放 pmr 内存
         IMGR.reset();
+        m_text.Destroy();
         m_audio.Destroy();
         m_renderer.Destroy();
         m_window.Destroy();
@@ -319,6 +334,28 @@ namespace engine {
     }
     void Engine::SetLogicalPresentMode(int w, int h) {
         m_renderer.SetLogicalPresentMode(w,h);
+    }
+    //文本接口
+    void Engine::LoadTTF(std::string_view name, std::string_view path, float ptsize) {
+        m_text.LoadTTF(name,path,ptsize);
+    }
+    void Engine::DrawText(std::string_view ttf, std::string_view text, int l, int r, int t, int b) {
+        m_text.DrawText(ttf,text,l,r,t,b);
+    }
+    void Engine::SetTextSize(float size, std::string_view ttf) {
+        m_text.SetTextSize(size,ttf);
+    }
+    void Engine::SetTextColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+        m_text.SetTextColor(r,g,b,a);
+    }
+    void Engine::SetTextAlign(TextRender::HAlign h, TextRender::VAlign v) {
+        m_text.SetTextAlign(h,v);
+    }
+    void Engine::AddTextWorld(int id, int left, int right, int top, int bottom) {
+        m_text.AddTextWorld(id,left,right,top,bottom);
+    }
+    void Engine::SetTextWorldID(int id) {
+        m_text.SetTextWorldID(id);
     }
     void Engine::LoadMusic(const std::string& name,std::string_view path ,Uint32 start,Uint32 end ,int loop) noexcept {
         m_audio.LoadMusic(name,path,start,end,loop);
