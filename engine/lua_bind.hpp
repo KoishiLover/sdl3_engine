@@ -8,6 +8,7 @@
 
 #include<SDL3/SDL_stdinc.h>
 #include<sol/sol.hpp>
+#include"resource/TextRender.hpp"
 namespace engine {
     enum class BlendMode : Uint32;
 
@@ -28,6 +29,13 @@ namespace engine {
         static void LW_SetLogicalPresentMode(int w, int h);
         static void LW_AddWorld(int id, int left, int right, int top, int bottom);
         static void LW_SetWorldID(int id);
+        static void LW_LoadTTF(std::string_view name, std::string_view path, float ptsize);
+        static void LW_DrawText(std::string_view ttf, std::string_view text, int l, int r, int t, int b);
+        static void LW_SetTextSize(float size, std::string_view ttf);
+        static void LW_SetTextColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+        static void LW_SetTextAlign(TextRender::HAlign h, TextRender::VAlign v);
+        static void LW_AddTextWorld(int id, int left, int right, int top, int bottom);
+        static void LW_SetTextWorldID(int id);
         static void LW_LoadMusic(const std::string& name,std::string_view path ,Uint32 start,Uint32 end ,int loop) noexcept;
         static void LW_PlayMusic(std::string_view name)  noexcept;
         static void LW_StopMusic(std::string_view name) noexcept;
@@ -39,6 +47,10 @@ namespace engine {
         static void LW_SetSEVolume(float vol) noexcept;
         static bool LW_GetKeyState(int key)noexcept;
         static bool LW_IsKeyDown(int key)noexcept;
+        //日志：err 是致命的（弹框 + 退出进程），info/warn 只写 userdata/log/engine.log
+        static void LW_LogInfo(std::string_view message);
+        static void LW_LogWarn(std::string_view message);
+        static void LW_LogErr(std::string_view message);
         [[nodiscard]] static bool Init(sol::state &m_lua );
         static void GameObjectBind(sol::state &m_lua);
 

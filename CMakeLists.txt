@@ -22,6 +22,8 @@ add_executable(hatta-engine main.cpp
         engine/game/GameObjectManager.cpp
         engine/game/GameObjectManager.hpp
         engine/game/lua_object_bind.cpp
+        engine/resource/TextRender.cpp
+        engine/resource/TextRender.hpp
 )
 add_custom_command(TARGET hatta-engine POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory

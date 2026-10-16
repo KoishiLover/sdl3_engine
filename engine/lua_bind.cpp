@@ -4,6 +4,7 @@
 //
 #include"lua_bind.hpp"
 #include"engine_frame.h"
+#include"engine_log.hpp"
 namespace engine {
     void LuaWrapper::LW_SetFPS(Uint64 fps) {
         IENGINE.SetFPS(fps);
@@ -61,6 +62,28 @@ namespace engine {
     void LuaWrapper::LW_SetWorldID(int id) {
         IENGINE.SetWorldID(id);
     }
+    ////文本相关
+    void LuaWrapper::LW_LoadTTF(std::string_view name, std::string_view path, float ptsize) {
+        IENGINE.LoadTTF(name,path,ptsize);
+    }
+    void LuaWrapper::LW_DrawText(std::string_view ttf, std::string_view text, int l, int r, int t, int b) {
+        IENGINE.DrawText(ttf,text,l,r,t,b);
+    }
+    void LuaWrapper::LW_SetTextSize(float size, std::string_view ttf) {
+        IENGINE.SetTextSize(size,ttf);
+    }
+    void LuaWrapper::LW_SetTextColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+        IENGINE.SetTextColor(r,g,b,a);
+    }
+    void LuaWrapper::LW_SetTextAlign(TextRender::HAlign h, TextRender::VAlign v) {
+        IENGINE.SetTextAlign(h,v);
+    }
+    void LuaWrapper::LW_AddTextWorld(int id, int left, int right, int top, int bottom) {
+        IENGINE.AddTextWorld(id,left,right,top,bottom);
+    }
+    void LuaWrapper::LW_SetTextWorldID(int id) {
+        IENGINE.SetTextWorldID(id);
+    }
     /////音频相关
     void LuaWrapper::LW_LoadMusic(const std::string& name,std::string_view path ,Uint32 start,Uint32 end ,int loop) noexcept {
         IENGINE.LoadMusic(name,path ,start,end,loop);
@@ -97,6 +120,18 @@ namespace engine {
         return IENGINE.IsKeyDown(key);
     }
 
+    ////日志相关
+    //消息是作为「参数」交给 std::format 的，不是格式串 —— 脚本里写 {} %d 都不会被解析
+    void LuaWrapper::LW_LogInfo(std::string_view message) {
+        EngineLogger::info("[lua] {}",message);
+    }
+    void LuaWrapper::LW_LogWarn(std::string_view message) {
+        EngineLogger::warn("[lua] {}",message);
+    }
+    void LuaWrapper::LW_LogErr(std::string_view message) {
+        EngineLogger::err("[lua] {}",message);      //致命：弹消息框 + 退出进程
+    }
+
 }
 
 namespace engine {
@@ -130,6 +165,22 @@ namespace engine {
         engine.set_function("SetLogicalPresentSize",  &LuaWrapper::LW_SetLogicalPresentMode);
         engine.set_function("AddWorld",               &LuaWrapper::LW_AddWorld);
         engine.set_function("SetWorldID",             &LuaWrapper::LW_SetWorldID);
+        //文本相关
+        engine.new_enum("HAlign",
+            "Left",   TextRender::HAlign::Left,
+            "Center", TextRender::HAlign::Center,
+            "Right",  TextRender::HAlign::Right);
+        engine.new_enum("VAlign",
+            "Top",    TextRender::VAlign::Top,
+            "Middle", TextRender::VAlign::Middle,
+            "Bottom", TextRender::VAlign::Bottom);
+        engine.set_function("LoadTTF",        &LuaWrapper::LW_LoadTTF);
+        engine.set_function("DrawText",       &LuaWrapper::LW_DrawText);
+        engine.set_function("SetTextSize",    &LuaWrapper::LW_SetTextSize);
+        engine.set_function("SetTextColor",   &LuaWrapper::LW_SetTextColor);
+        engine.set_function("SetTextAlign",   &LuaWrapper::LW_SetTextAlign);
+        engine.set_function("AddTextWorld",   &LuaWrapper::LW_AddTextWorld);
+        engine.set_function("SetTextWorldID", &LuaWrapper::LW_SetTextWorldID);
         //音频相关
         engine.set_function("LoadMusic",          &LuaWrapper::LW_LoadMusic);
         engine.set_function("PlayMusic",          &LuaWrapper::LW_PlayMusic);
@@ -143,6 +194,10 @@ namespace engine {
         //键盘输入
         engine.set_function("GetKeyState",        &LuaWrapper::LW_GetKeyState);
         engine.set_function("IsKeyDown",          &LuaWrapper::LW_IsKeyDown);
+        //日志
+        engine.set_function("LogInfo",            &LuaWrapper::LW_LogInfo);
+        engine.set_function("LogWarn",            &LuaWrapper::LW_LogWarn);
+        engine.set_function("LogErr",             &LuaWrapper::LW_LogErr);
 
         //对象系统绑定（Object.New / GameObject usertype / 混合 __index/__newindex）
         GameObjectBind(m_lua);
