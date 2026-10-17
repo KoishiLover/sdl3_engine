@@ -389,7 +389,7 @@ namespace engine {
         return m_input.GetKeyState(key);
     }
     bool Engine::IsKeyDown(const int key) const noexcept {
-        return m_input.GetKeyState(key);
+        return m_input.IsKeyDown(key);
     }
 
 }
