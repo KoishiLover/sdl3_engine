@@ -687,6 +687,10 @@ Debug 也只能链 Release 版静态库（CRT 不匹配风险）。`external/CMa
   （脚本里还写死了绝对路径 `D:\...\cmake-build-release-visual-studio\bin\Release`）。
   建议脚本迁到 `tools/`、路径改成参数/环境变量，截图加进 `.gitignore`
 - **`std::format` 与 spdlog 自带 fmt 并存**（`engine_frame.cpp:11` + vcpkg 装了 fmt 12.2.0）：
+- **PowerShell 脚本的编码陷阱**：`tools/*.ps1` 若存成**无 BOM 的 UTF-8**，Windows PowerShell 5.1
+  会按系统 ANSI（GBK）解码 → 中文注释/字符串变乱码 → 解析器报「字符串缺少终止符」。
+  修法：`.ps1` 一律存 **UTF-8 带 BOM**，或脚本正文只用 ASCII
+  （`pwsh` 7 默认按 UTF-8 读取，所以用 7 做语法检查测不出这个问题）
   两套格式化实现，编译时间与体积双增
 
 ---
