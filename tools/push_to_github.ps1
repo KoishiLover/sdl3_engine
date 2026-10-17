@@ -1,17 +1,18 @@
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    把本地 master（工作区布局）快进推送到 GitHub。
+    Fast-forward push local master (workspace layout) to GitHub.
 
 .DESCRIPTION
-    只做【快进】推送，绝不 force。推送前会校验 origin/master 是否为 master 的祖先，
-    不满足就直接中止，避免意外重写远端历史。
+    Fast-forward ONLY. This script never forces.
+    It aborts if origin/master is not an ancestor of master.
 
-    ⚠ 必须在 DSH 沙箱【之外】的普通 PowerShell 里运行。
-      沙箱屏蔽了 schannel 的凭据访问，git 连不上 GitHub，会报：
+    NOTE: run this OUTSIDE the DSH sandbox.
+    The sandbox blocks schannel credentials, so git cannot reach GitHub there:
         fatal: ... schannel: AcquireCredentialsHandle failed: SEC_E_NO_CREDENTIALS
 
 .PARAMETER DryRun
-    只做干跑（git push --dry-run），不真正推送。
+    Only run "git push --dry-run", do not really push.
 
 .EXAMPLE
     .\tools\push_to_github.ps1 -DryRun
@@ -23,71 +24,69 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# 切到仓库根
+function Step([string]$t) { Write-Host ""; Write-Host "== $t ==" -ForegroundColor Cyan }
+function Ok([string]$t)   { Write-Host "   $t" -ForegroundColor Green }
+function Warn([string]$t) { Write-Host "   $t" -ForegroundColor Yellow }
+
 $top = (git rev-parse --show-toplevel 2>$null)
-if (-not $top) { throw "当前目录不是 git 仓库" }
+if (-not $top) { throw "Not a git repository (git rev-parse --show-toplevel failed)." }
 Set-Location $top
 
-Write-Host "== 1. 仓库根 ==" -ForegroundColor Cyan
-Write-Host "   $top"
+Step "1. Repository root"
+Ok $top
 
-Write-Host "== 2. 当前 master 的目录结构 ==" -ForegroundColor Cyan
+Step "2. Layout of local HEAD"
 git ls-tree --name-only HEAD | ForEach-Object { Write-Host "   $_" }
 
-Write-Host "== 3. 工作区状态 ==" -ForegroundColor Cyan
+Step "3. Working tree"
 $st = git status --porcelain
 if ($st) {
-    Write-Host "   有未提交改动，请先提交：" -ForegroundColor Yellow
+    Warn "Working tree is NOT clean. Commit or stash first:"
     $st | ForEach-Object { Write-Host "   $_" }
-    throw "工作区不干净，已中止"
+    throw "Aborted: working tree not clean."
 }
-Write-Host "   干净 ✓" -ForegroundColor Green
+Ok "clean"
 
-Write-Host "== 4. 抓取远端 ==" -ForegroundColor Cyan
+Step "4. Fetch origin"
 git fetch origin
 if ($LASTEXITCODE -ne 0) {
-    throw @"
-fetch 失败。请先确认凭据可用：
-  git config --global credential.helper manager
-然后在任意 git 命令中按提示登录 GitHub（浏览器授权），或使用 Personal Access Token。
-"@
+    throw "fetch failed. Check credentials: git config --global credential.helper manager"
 }
 
-Write-Host "== 5. 校验是否可快进 ==" -ForegroundColor Cyan
+Step "5. Check fast-forward"
 git merge-base --is-ancestor origin/master master
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "   origin/master 不是 master 的祖先 → 推送会重写历史。" -ForegroundColor Red
-    Write-Host "   已中止（本脚本不做 force）。如确需重写，请手动：git push --force origin master" -ForegroundColor Red
-    throw "不可快进"
+    Warn "origin/master is NOT an ancestor of master."
+    Warn "Pushing would rewrite remote history. Aborted (this script never forces)."
+    throw "Not fast-forwardable."
 }
 $n = git rev-list --count origin/master..master
-Write-Host "   可快进，将推送 $n 个提交：" -ForegroundColor Green
+Ok "fast-forwardable, $n commit(s) to push:"
 git log --oneline origin/master..master | ForEach-Object { Write-Host "     $_" }
 
-Write-Host "== 6. 干跑 ==" -ForegroundColor Cyan
+Step "6. Dry run"
 git push --dry-run origin master
-if ($LASTEXITCODE -ne 0) { throw "干跑失败，已中止" }
+if ($LASTEXITCODE -ne 0) { throw "dry-run failed." }
 
 if ($DryRun) {
-    Write-Host "== 指定了 -DryRun，停在干跑，未实际推送 ==" -ForegroundColor Yellow
+    Warn "-DryRun given: stopping before the real push."
     return
 }
 
-Write-Host "== 7. 正式推送 ==" -ForegroundColor Cyan
+Step "7. Push"
 git push -u origin master
-if ($LASTEXITCODE -ne 0) { throw "推送失败" }
+if ($LASTEXITCODE -ne 0) { throw "push failed." }
 
-Write-Host "== 8. 验证 ==" -ForegroundColor Cyan
-Write-Host "   远端 master 的目录结构：" -ForegroundColor Gray
+Step "8. Verify remote"
+Write-Host "   remote master tree:" -ForegroundColor Gray
 git ls-tree --name-only origin/master | ForEach-Object { Write-Host "     $_" }
-Write-Host "   远端最近 3 次提交：" -ForegroundColor Gray
+Write-Host "   remote master log:" -ForegroundColor Gray
 git log --oneline -3 origin/master | ForEach-Object { Write-Host "     $_" }
 git status -sb | ForEach-Object { Write-Host "   $_" }
 
-Write-Host ""
-Write-Host "== 9. 最后一步（网页操作，脚本做不了）==" -ForegroundColor Yellow
-Write-Host "   打开 https://github.com/KoishiLover/sdl3_engine/settings/branches"
-Write-Host "   把 Default branch 从 main 改成 master"
-Write-Host ""
-Write-Host "   如需回滚远端 master（原始值 088b075）：" -ForegroundColor Gray
-Write-Host "     git push --force origin 088b075:master"
+Step "9. Manual step (web UI, cannot be scripted)"
+Warn "Open  https://github.com/KoishiLover/sdl3_engine/settings/branches"
+Warn "Set 'Default branch' from main to master."
+Warn ""
+Warn "Rollback anchor (previous remote master): 088b075"
+Warn "  git push --force origin 088b075:master"
