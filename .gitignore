@@ -1,0 +1,84 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Linker files
+*.ilk
+
+# Debugger Files
+*.pdb
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+*.so.*
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Build directories
+build/
+Build/
+build-*/
+cmake-build-release-visual-studio/
+cmake-build-debug-visual-studio/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+install_manifest.txt
+compile_commands.json
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+*.swp
+
+# vcpkg
+vcpkg_installed/
+
+# debug information files
+*.dwo
+
+# test output & cache
+Testing/
+.cache/
+
+# external
+external/luajit2/
+# ==== 工作区补充（由 P0-1「纳入版本控制」迁移时新增）====
+# 构建产物通配（原有规则是逐个硬编码目录名）
+cmake-build-*/
+# 运行时数据：日志 + 验证截图 + 临时脚本
+userdata/
+# 迁移期的仓库备份
+src.bak/
+src.worktree/
+*.bak
+# IDE 状态
+.idea/
