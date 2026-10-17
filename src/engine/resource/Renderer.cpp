@@ -37,6 +37,7 @@ namespace engine {
         }
         if (m_textures.contains(name)) {
             log::warn("[lua] 纹理:{},已经存在,加载取消",name);
+            return;
         }
         m_textures[std::string(name)] = TexturePtr(tex);
         log::info("[lua] 纹理资源 [{}] 创建成功",name);
@@ -50,6 +51,7 @@ namespace engine {
         }
         if (m_images.contains(img)) {
             log::warn("[lua] 图片资源 [{}]已存在，加载取消",img);
+            return;
         }
         m_images.insert_or_assign(std::string(img), Sprite(x,y,w,h,(_tex->second.get())));
         log::info("[lua] 图片资源 [{}] 创建成功",img);
